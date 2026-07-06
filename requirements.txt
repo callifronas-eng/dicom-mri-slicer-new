@@ -1,0 +1,15 @@
+# DICOM MRI Image Slicer - Python Dependencies
+
+# Core DICOM processing
+pydicom>=2.4.0
+
+# Image processing
+numpy>=1.24.0
+Pillow>=10.0.0
+
+# Visualization
+matplotlib>=3.7.0
+
+# Optional: Advanced processing
+# SimpleITK>=2.3.0  # Uncomment for advanced 3D processing
+# nibabel>=5.0.0    # Uncomment for NIfTI format support

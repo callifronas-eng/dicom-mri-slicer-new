@@ -1,0 +1,2 @@
+# This file ensures the output folder is tracked in Git even when empty
+# Processed slices will be saved here

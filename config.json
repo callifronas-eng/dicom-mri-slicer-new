@@ -1,0 +1,25 @@
+{
+  "project_name": "DICOM MRI Image Slicer",
+  "version": "1.0.0",
+  "description": "Process DICOM MRI images and extract slices",
+  
+  "folders": {
+    "input_default": "lab_workflow/exams/input",
+    "output_default": "lab_workflow/exams/output",
+    "dicom_viewer": "DICOM_VIEWER",
+    "slicer_dicom": "SLICER_DICOM",
+    "protected_data": ["DICOM", "DICOM_DATA"]
+  },
+  
+  "processing": {
+    "normalize_images": true,
+    "output_format": "png",
+    "save_metadata": true,
+    "create_summary": true
+  },
+  
+  "privacy": {
+    "note": "DICOM/ and DICOM_DATA/ folders are protected and never committed to git",
+    "gitignore_protected": true
+  }
+}

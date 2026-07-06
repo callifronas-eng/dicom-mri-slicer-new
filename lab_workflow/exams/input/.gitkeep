@@ -1,0 +1,2 @@
+# This file ensures the input folder is tracked in Git even when empty
+# Place DICOM files in this folder for processing
