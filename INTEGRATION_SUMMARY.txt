@@ -1,0 +1,77 @@
+═══════════════════════════════════════════════════════════════════
+         DICOM SLICER INTEGRATION TO REGISTRY_WIN.PY
+═══════════════════════════════════════════════════════════════════
+
+📋 WHAT TO DO:
+
+Edit your registry_win.py file in 2 places:
+
+───────────────────────────────────────────────────────────────────
+1️⃣  UPDATE show_tools_menu() METHOD (Line ~764)
+───────────────────────────────────────────────────────────────────
+
+BEFORE:
+    menu.add_command(label="ΕΠΕΞΕΡΓΑΣΙΑ PDF→OCR", command=self._tool_edit_lab_results)
+    menu.add_separator()
+    menu.add_command(label="MED5", command=self._tool_med5)
+
+AFTER:
+    menu.add_command(label="ΕΠΕΞΕΡΓΑΣΙΑ PDF→OCR", command=self._tool_edit_lab_results)
+    menu.add_command(label="DICOM SLICER (MRI)",  command=self._tool_dicom_slicer)
+    menu.add_separator()
+    menu.add_command(label="MED5", command=self._tool_med5)
+
+───────────────────────────────────────────────────────────────────
+2️⃣  ADD NEW METHOD _tool_dicom_slicer() (After line ~804)
+───────────────────────────────────────────────────────────────────
+
+Add this complete method after _tool_med5():
+
+    # -----------------------------------------------------------
+    def _tool_dicom_slicer(self):
+        """ Launch the DICOM MRI Image Slicer application. """
+        script_dir = Path(__file__).resolve().parent
+        script = script_dir / "dicom-slicer" / "SLICER_DICOM" / "dicom_slicer.py"
+        
+        if not script.exists():
+            messagebox.showerror("DICOM Slicer", f"Δεν βρέθηκε το αρχείο:\n{script.name}")
+            return
+        
+        py = "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3"
+        if not Path(py).exists():
+            py = sys.executable
+        
+        try:
+            subprocess.Popen(
+                [py, str(script)],
+                cwd=str(script.parent.parent),
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        except Exception as e:
+            messagebox.showerror("DICOM Slicer", f"Αποτυχία εκκίνησης:\n{e}")
+
+═══════════════════════════════════════════════════════════════════
+
+✅ RESULT:
+
+Tools Menu (Εργαλεία) will now show:
+   • ΕΠΕΞΕΡΓΑΣΙΑ ΕΙΚΟΝΩΝ
+   • ΕΠΕΞΕΡΓΑΣΙΑ PDF→OCR
+   • DICOM SLICER (MRI)      ← NEW!
+   ────────────────────
+   • MED5
+
+═══════════════════════════════════════════════════════════════════
+
+📂 REQUIRED FOLDER STRUCTURE:
+
+AUGMENT CODE DISK/
+├── registry_win.py
+└── dicom-slicer/
+    └── SLICER_DICOM/
+        └── dicom_slicer.py
+
+═══════════════════════════════════════════════════════════════════
