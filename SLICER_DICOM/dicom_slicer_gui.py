@@ -16,12 +16,16 @@ class DICOMSlicerGUI:
         self.root = root
         self.root.title("DICOM MRI Image Slicer")
         self.root.geometry("700x600")
-        
-        # Default paths
+
+        # Default paths - use absolute path from script location
         script_dir = Path(__file__).resolve().parent.parent
         self.input_path = script_dir / "lab_workflow" / "exams" / "input"
         self.output_path = script_dir / "lab_workflow" / "exams" / "output"
-        
+
+        # Create folders if they don't exist
+        self.input_path.mkdir(parents=True, exist_ok=True)
+        self.output_path.mkdir(parents=True, exist_ok=True)
+
         self.create_widgets()
         
     def create_widgets(self):
@@ -71,12 +75,20 @@ class DICOMSlicerGUI:
         status_bar.pack(side="bottom", fill="x")
         
     def browse_input(self):
-        folder = filedialog.askdirectory(title="Select Input Folder with DICOM Files")
+        initial_dir = str(self.input_path) if self.input_path.exists() else str(Path.home())
+        folder = filedialog.askdirectory(
+            title="Select Input Folder with DICOM Files",
+            initialdir=initial_dir
+        )
         if folder:
             self.input_var.set(folder)
-            
+
     def browse_output(self):
-        folder = filedialog.askdirectory(title="Select Output Folder for Results")
+        initial_dir = str(self.output_path) if self.output_path.exists() else str(Path.home())
+        folder = filedialog.askdirectory(
+            title="Select Output Folder for Results",
+            initialdir=initial_dir
+        )
         if folder:
             self.output_var.set(folder)
             
