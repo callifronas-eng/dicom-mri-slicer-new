@@ -152,12 +152,12 @@ class DICOMSlicerGUI:
                              bg=BEIGE_COLOR, fg="green", font=("Arial", 10))
         status_bar.pack(side="bottom", fill="x", padx=8, pady=(0, 8))
 
-    def _create_round_button(self, parent, text, command, width=110, height=32):
+    def _create_round_button(self, parent, text, command, width=110, height=26):
         """Create a round pill-shaped button with white background and blue text"""
         canvas = tk.Canvas(parent, width=width, height=height, bg=BLUE_COLOR,
                           bd=0, highlightthickness=0)
         canvas._text = text
-        canvas._font = ('Helvetica', 11, 'bold')
+        canvas._font = ('Helvetica', 10, 'bold')
         canvas._width = width
         canvas._height = height
         canvas._command = command
