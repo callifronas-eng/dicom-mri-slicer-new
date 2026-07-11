@@ -86,21 +86,21 @@ class DICOMSlicerGUI:
         canvas.create_text(w/2, h/2, text=canvas._text, font=canvas._font, fill=fg)
 
     def create_widgets(self):
-        # Blue band with title and round buttons (like diagnosis.py)
-        title_band = tk.Frame(self.root, bg=BLUE_COLOR, height=65)
+        # Blue ribbon with only the title (no buttons inside)
+        title_band = tk.Frame(self.root, bg=BLUE_COLOR, height=40)
         title_band.pack(fill="x", padx=8, pady=8)
         title_band.pack_propagate(False)
 
-        # Title in the blue band
+        # Title in the blue ribbon
         title = tk.Label(title_band, text="DICOM MRI Image Slicer",
                         font=("Arial", 16, "bold"), fg="white", bg=BLUE_COLOR)
-        title.pack(pady=2)
+        title.pack(expand=True)
 
-        # Button container for round buttons
-        button_container = tk.Frame(title_band, bg=BLUE_COLOR)
-        button_container.pack(pady=2)
+        # Button container BELOW the blue ribbon (on beige background)
+        button_container = tk.Frame(self.root, bg=BEIGE_COLOR)
+        button_container.pack(pady=8)
 
-        # Create round pill-shaped buttons
+        # Create round pill-shaped buttons (outside/below the blue ribbon)
         self._create_round_button(button_container, "Επιλογή Εισόδου", self.browse_input, width=140)
         self._create_round_button(button_container, "Επιλογή Εξόδου", self.browse_output, width=140)
         self._create_round_button(button_container, "Επεξεργασία", self.process, width=120)
