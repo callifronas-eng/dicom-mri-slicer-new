@@ -87,18 +87,18 @@ class DICOMSlicerGUI:
 
     def create_widgets(self):
         # Blue band with title and round buttons (like diagnosis.py)
-        title_band = tk.Frame(self.root, bg=BLUE_COLOR, height=80)
+        title_band = tk.Frame(self.root, bg=BLUE_COLOR, height=65)
         title_band.pack(fill="x", padx=8, pady=8)
         title_band.pack_propagate(False)
 
         # Title in the blue band
         title = tk.Label(title_band, text="DICOM MRI Image Slicer",
-                        font=("Arial", 18, "bold"), fg="white", bg=BLUE_COLOR)
-        title.pack(pady=5)
+                        font=("Arial", 16, "bold"), fg="white", bg=BLUE_COLOR)
+        title.pack(pady=2)
 
         # Button container for round buttons
         button_container = tk.Frame(title_band, bg=BLUE_COLOR)
-        button_container.pack(pady=5)
+        button_container.pack(pady=2)
 
         # Create round pill-shaped buttons
         self._create_round_button(button_container, "Επιλογή Εισόδου", self.browse_input, width=140)
