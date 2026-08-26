@@ -304,21 +304,36 @@ class DICOMSlicerGUI:
             sys.path.insert(0, str(repo_dir))
         import exam_db
 
-        raw = simpledialog.askstring("Αποθήκευση στο Αρχείο Εξετάσεων",
-                                     "Αριθμός ασθενούς (patient_id):",
-                                     parent=self.root)
-        if raw is None:
-            return
-        if not raw.strip().isdigit():
-            messagebox.showerror("Αποθήκευση στο Αρχείο",
-                                 "Ο αριθμός ασθενούς πρέπει να είναι ακέραιος.")
-            return
-        patient_id = int(raw.strip())
+        # patient: use the record open in the registry right now (--patient),
+        # otherwise ask; ΑΜΚΑ: auto-fetched from the registry (patients.db)
+        patient_id = PATIENT_ID_ARG
+        if patient_id is None:
+            raw = simpledialog.askstring("Αποθήκευση στο Αρχείο Εξετάσεων",
+                                         "Αριθμός ασθενούς (patient_id):",
+                                         parent=self.root)
+            if raw is None:
+                return
+            if not raw.strip().isdigit():
+                messagebox.showerror("Αποθήκευση στο Αρχείο",
+                                     "Ο αριθμός ασθενούς πρέπει να είναι ακέραιος.")
+                return
+            patient_id = int(raw.strip())
 
-        amka = simpledialog.askstring("Αποθήκευση στο Αρχείο Εξετάσεων",
-                                      "ΑΜΚΑ ασθενούς (11 ψηφία — κενό αν άγνωστο):",
-                                      parent=self.root)
-        amka = amka.strip() if amka and amka.strip() else None
+        amka = None
+        pat_name = ""
+        row = exam_db.registry_lookup(patient_id)
+        if row:
+            amka = (row[0] or "").strip() or None
+            pat_name = f" — {row[1]} {row[2]}".rstrip()
+        if amka is None:
+            amka = simpledialog.askstring(
+                "Αποθήκευση στο Αρχείο Εξετάσεων",
+                f"ΑΜΚΑ ασθενούς {patient_id}{pat_name}\n"
+                "(δεν βρέθηκε στο μητρώο — κενό αν άγνωστο):",
+                parent=self.root)
+            amka = amka.strip() if amka and amka.strip() else None
+        else:
+            self.log(f"✓ ΑΜΚΑ από το μητρώο: ασθενής {patient_id}{pat_name}")
 
         try:
             conn = exam_db.connect()
@@ -359,7 +374,17 @@ class DICOMSlicerGUI:
             messagebox.showerror("Αποθήκευση στο Αρχείο", f"Σφάλμα:\n{e}")
 
 
+PATIENT_ID_ARG = None    # patient shown in the registry when launched
+
+
 def main():
+    global PATIENT_ID_ARG
+    argv = sys.argv[1:]
+    if "--patient" in argv:
+        try:
+            PATIENT_ID_ARG = int(argv[argv.index("--patient") + 1])
+        except (IndexError, ValueError):
+            PATIENT_ID_ARG = None
     root = tk.Tk()
     app = DICOMSlicerGUI(root)
     root.mainloop()
