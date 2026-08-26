@@ -5,12 +5,26 @@ Provides a simple GUI for selecting input/output folders and running the slicer
 """
 
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, scrolledtext
+from tkinter import ttk, filedialog, messagebox, scrolledtext, simpledialog
 from tkinter import font as tkfont
 from pathlib import Path
 import threading
 import sys
+import json
 from dicom_slicer import DICOMSlicer
+
+
+def _find_exam_db():
+    """Locate exam_db.py (lives in the MEDICASOFT-ASCLEPIUS root, which on
+    the owner's Macs is the 'AUGMENT CODE DISK' folder above this repo)."""
+    here = Path(__file__).resolve()
+    for parent in list(here.parents)[:5]:
+        if (parent / "exam_db.py").exists():
+            return parent
+        for sub in ("MEDICASOFT-ASCLEPIUS",):
+            if (parent / sub / "exam_db.py").exists():
+                return parent / sub
+    return None
 
 # Color constants matching MEDICASOFT-ASCLEPIUS style
 BEIGE_COLOR = "#F5E6C4"
@@ -104,6 +118,8 @@ class DICOMSlicerGUI:
         self._create_round_button(button_container, "Επιλογή Εισόδου", self.browse_input, width=140)
         self._create_round_button(button_container, "Επιλογή Εξόδου", self.browse_output, width=140)
         self._create_round_button(button_container, "Επεξεργασία", self.process, width=120)
+        self._create_round_button(button_container, "💾 Αποθήκευση στο Αρχείο",
+                                  self.save_to_archive, width=190)
 
         # Main content area
         content_frame = tk.Frame(self.root, bg=BEIGE_COLOR)
@@ -250,8 +266,9 @@ class DICOMSlicerGUI:
             self.log(output)
 
             if success:
+                self._last_output = output_folder
                 self.status_var.set("Η επεξεργασία ολοκληρώθηκε με επιτυχία!")
-                messagebox.showinfo("Επιτυχία", f"Η επεξεργασία ολοκληρώθηκε!\n\nΤα αποτελέσματα αποθηκεύτηκαν στο:\n{output_folder}")
+                messagebox.showinfo("Επιτυχία", f"Η επεξεργασία ολοκληρώθηκε!\n\nΤα αποτελέσματα αποθηκεύτηκαν στο:\n{output_folder}\n\nΠατήστε '💾 Αποθήκευση στο Αρχείο' για καταχώρηση στο Αρχείο Εξετάσεων.")
             else:
                 self.status_var.set("Η επεξεργασία απέτυχε!")
                 messagebox.showerror("Σφάλμα", "Η επεξεργασία απέτυχε. Ελέγξτε το αρχείο καταγραφής.")
@@ -262,6 +279,84 @@ class DICOMSlicerGUI:
             messagebox.showerror("Σφάλμα", f"Προέκυψε σφάλμα:\n{str(e)}")
         finally:
             pass
+
+    # ------------------------------------------------------------------
+    # Save processed series into the Universal Exam Repository
+    # ------------------------------------------------------------------
+    def save_to_archive(self):
+        """Register every processed DICOM series in patient_exams.db."""
+        output = Path(getattr(self, "_last_output", "") or self.output_var.get())
+        series_dirs = sorted(p for p in output.glob("series_*")
+                             if (p / "metadata.json").exists())
+        if not series_dirs:
+            messagebox.showwarning(
+                "Αποθήκευση στο Αρχείο",
+                "Δεν βρέθηκαν επεξεργασμένες σειρές (series_*) στον φάκελο εξόδου.\n"
+                "Εκτελέστε πρώτα την Επεξεργασία.")
+            return
+
+        repo_dir = _find_exam_db()
+        if repo_dir is None:
+            messagebox.showerror("Αποθήκευση στο Αρχείο",
+                                 "Δεν βρέθηκε το exam_db.py (MEDICASOFT-ASCLEPIUS).")
+            return
+        if str(repo_dir) not in sys.path:
+            sys.path.insert(0, str(repo_dir))
+        import exam_db
+
+        raw = simpledialog.askstring("Αποθήκευση στο Αρχείο Εξετάσεων",
+                                     "Αριθμός ασθενούς (patient_id):",
+                                     parent=self.root)
+        if raw is None:
+            return
+        if not raw.strip().isdigit():
+            messagebox.showerror("Αποθήκευση στο Αρχείο",
+                                 "Ο αριθμός ασθενούς πρέπει να είναι ακέραιος.")
+            return
+        patient_id = int(raw.strip())
+
+        amka = simpledialog.askstring("Αποθήκευση στο Αρχείο Εξετάσεων",
+                                      "ΑΜΚΑ ασθενούς (11 ψηφία — κενό αν άγνωστο):",
+                                      parent=self.root)
+        amka = amka.strip() if amka and amka.strip() else None
+
+        try:
+            conn = exam_db.connect()
+            exam_ids = []
+            for sd in series_dirs:
+                meta = json.loads((sd / "metadata.json").read_text())
+                study = str(meta.get("StudyDate", "")).strip()
+                if len(study) == 8 and study.isdigit():
+                    exam_date = f"{study[:4]}-{study[4:6]}-{study[6:8]}"
+                else:
+                    from datetime import date
+                    exam_date = date.today().isoformat()
+                modality = meta.get("Modality", "MRI")
+                descr = meta.get("SeriesDescription", "") or sd.name
+                n_png = len(list(sd.glob("slice_*.png")))
+                exam_id = exam_db.add_exam(
+                    conn,
+                    patient_id=patient_id,
+                    amka=amka,
+                    exam_date=exam_date,
+                    exam_kind=f"{modality} {descr}".strip(),
+                    source_file=sd,                 # whole series folder → exam_archive
+                    result_text=(f"{modality} — {descr}. "
+                                 f"{n_png} τομές (slices). "
+                                 f"StudyDate: {exam_date}."),
+                    result_json=meta,
+                )
+                exam_ids.append(exam_id)
+                self.log(f"✓ Καταχωρήθηκε exam_id={exam_id}: {modality} {descr} ({n_png} τομές)")
+            conn.close()
+            self.status_var.set(f"Καταχωρήθηκαν {len(exam_ids)} σειρές στο Αρχείο Εξετάσεων")
+            messagebox.showinfo(
+                "Αποθήκευση στο Αρχείο",
+                f"Καταχωρήθηκαν {len(exam_ids)} σειρές (exam_ids: "
+                f"{', '.join(map(str, exam_ids))}) για τον ασθενή {patient_id}.\n\n"
+                f"Βάση: {exam_db.DB_PATH}\nΑρχεία: {exam_db.ARCHIVE_DIR}")
+        except Exception as e:
+            messagebox.showerror("Αποθήκευση στο Αρχείο", f"Σφάλμα:\n{e}")
 
 
 def main():
